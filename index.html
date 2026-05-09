@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent PromptX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-void:#0a0a0b;
+  --bg-panel:#111113;
+  --bg-surface:#18181c;
+  --bg-input:#1e1e24;
+  --bg-hover:#222228;
+  --accent:#4f8ef7;
+  --accent-dim:#4f8ef720;
+  --accent-glow:#4f8ef740;
+  --text-primary:#f0f0f4;
+  --text-secondary:#8888a0;
+  --text-muted:#444458;
+  --border:#2a2a35;
+  --border-soft:#1e1e2a;
+  --user-bubble:#1a2540;
+  --user-border:#2a3f6f;
+  --ai-bubble:#111113;
+  --radius:12px;
+  --radius-lg:16px;
+  --radius-xl:20px;
+  --font-ui:'DM Sans',sans-serif;
+  --font-head:'Syne',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --sidebar-w:260px;
+  --trans:all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+html,body{height:100%;background:var(--bg-void);color:var(--text-primary);font-family:var(--font-ui);font-size:15px;line-height:1.6;overflow:hidden}
+.app{display:flex;height:100vh;width:100vw;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--bg-panel);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;transition:var(--trans);z-index:20;overflow:hidden}
+.sidebar.collapsed{width:0;min-width:0;border-right:none}
+.sidebar-logo{padding:20px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-soft)}
+.logo-mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#4f8ef7,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:800;color:#fff;font-family:var(--font-head)}
+.logo-text{font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text-primary);white-space:nowrap;line-height:1.1}
+.logo-text span{display:block;font-size:10px;font-weight:400;color:var(--text-muted);letter-spacing:0.05em;font-family:var(--font-ui)}
+.sidebar-new{margin:12px 10px;padding:9px 14px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius);color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:var(--trans);font-family:var(--font-ui)}
+.sidebar-new:hover{background:var(--accent-glow)}
+.sidebar-section{padding:8px 10px 4px;font-size:10px;font-weight:600;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase}
+.chat-history{flex:1;overflow-y:auto;padding:0 8px}
+.chat-history::-webkit-scrollbar{width:3px}
+.chat-history::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+.history-item{padding:8px 10px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;font-size:13px;color:var(--text-secondary);transition:var(--trans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+.history-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.history-item.active{background:var(--bg-hover);color:var(--text-primary)}
+.history-item svg{width:13px;height:13px;flex-shrink:0;opacity:0.5}
+.sidebar-bottom{padding:10px;border-top:1px solid var(--border-soft)}
+.sidebar-btn{padding:9px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--text-secondary);transition:var(--trans);display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;font-family:var(--font-ui)}
+.sidebar-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+.sidebar-btn svg{width:15px;height:15px;flex-shrink:0}
+.user-section{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-surface);border-radius:var(--radius);margin:6px 0 0}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f8ef7);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;font-weight:500;color:var(--text-primary)}
+.user-plan{font-size:11px;color:var(--text-muted)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* NAVBAR */
+.navbar{height:52px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;padding:0 16px;gap:12px;background:var(--bg-panel);flex-shrink:0}
+.nav-toggle{width:32px;height:32px;border-radius:8px;background:none;border:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--trans)}
+.nav-toggle:hover{background:var(--bg-hover);color:var(--text-primary)}
+.nav-title{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text-primary);flex:1}
+.nav-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e80;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.nav-clear{padding:6px 12px;border-radius:8px;background:none;border:1px solid var(--border);color:var(--text-secondary);font-size:12px;cursor:pointer;transition:var(--trans);font-family:var(--font-ui);display:flex;align-items:center;gap:6px}
+.nav-clear:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+/* CHAT AREA */
+.chat-area{flex:1;overflow-y:auto;padding:24px 0;scroll-behavior:smooth}
+.chat-area::-webkit-scrollbar{width:4px}
+.chat-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+.chat-inner{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* WELCOME */
+.welcome{display:flex;flex-direction:column;align-items:center;padding:48px 20px 32px;text-align:center}
+.welcome-icon{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#4f8ef7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;font-family:var(--font-head);margin-bottom:24px;box-shadow:0 8px 32px #4f8ef730}
+.welcome h1{font-family:var(--font-head);font-size:26px;font-weight:800;color:var(--text-primary);margin-bottom:8px;line-height:1.2}
+.gradient{background:linear-gradient(135deg,#4f8ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.welcome p{font-size:14px;color:var(--text-secondary);max-width:460px;line-height:1.7;margin-bottom:36px}
+.prompt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;width:100%;max-width:680px}
+.prompt-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;text-align:left;transition:var(--trans);font-family:var(--font-ui)}
+.prompt-card:hover{border-color:var(--accent);background:var(--bg-hover);transform:translateY(-1px)}
+.prompt-card-icon{font-size:18px;margin-bottom:8px}
+.prompt-card-text{font-size:13px;color:var(--text-primary);font-weight:500;line-height:1.4}
+.prompt-card-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* MESSAGES */
+.msg{display:flex;gap:12px;margin-bottom:24px;animation:fadeUp 0.3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse}
+.msg-avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-top:2px}
+.msg.ai .msg-avatar{background:linear-gradient(135deg,#4f8ef7,#7c3aed);color:#fff}
+.msg.user .msg-avatar{background:var(--bg-surface);color:var(--text-secondary);border:1px solid var(--border)}
+.msg-content{max-width:80%}
+.msg.user .msg-content{text-align:right}
+.msg-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:500;letter-spacing:0.03em}
+.msg.user .msg-label{text-align:right}
+.msg-bubble{display:inline-block;padding:12px 16px;border-radius:var(--radius-lg);font-size:14px;line-height:1.7;max-width:100%;text-align:left}
+.msg.ai .msg-bubble{background:var(--ai-bubble);border:1px solid var(--border-soft);border-radius:4px var(--radius-lg) var(--radius-lg) var(--radius-lg)}
+.msg.user .msg-bubble{background:var(--user-bubble);border:1px solid var(--user-border);border-radius:var(--radius-lg) 4px var(--radius-lg) var(--radius-lg);color:#c8d8f8}
+.msg-bubble p{margin:0 0 10px}
+.msg-bubble p:last-child{margin-bottom:0}
+.msg-bubble pre{background:#0d0d14;border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0;font-family:var(--font-mono);font-size:12px;line-height:1.6;color:#a8b4d8}
+.msg-bubble code{font-family:var(--font-mono);font-size:12px;background:#0d0d14;padding:2px 6px;border-radius:4px;color:#7dd3fc}
+.msg-bubble pre code{background:none;padding:0;color:#a8b4d8}
+.msg-actions{display:flex;gap:6px;margin-top:8px}
+.msg-action{padding:4px 10px;border-radius:6px;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;cursor:pointer;transition:var(--trans);display:flex;align-items:center;gap:5px;font-family:var(--font-ui)}
+.msg-action:hover{border-color:var(--accent);color:var(--accent)}
+
+/* TYPING */
+.typing-bubble{display:flex;align-items:center;gap:5px;padding:14px 18px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:0.4}
+.dot:nth-child(1){animation:blink 1.2s 0s infinite}
+.dot:nth-child(2){animation:blink 1.2s 0.2s infinite}
+.dot:nth-child(3){animation:blink 1.2s 0.4s infinite}
+@keyframes blink{0%,80%,100%{opacity:0.2;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+
+/* INPUT */
+.input-area{padding:12px 20px 16px;border-top:1px solid var(--border-soft);background:var(--bg-panel);flex-shrink:0}
+.input-inner{max-width:760px;margin:0 auto}
+.input-box{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-xl);padding:14px 16px;display:flex;gap:12px;align-items:flex-end;transition:var(--trans)}
+.input-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.input-box textarea{flex:1;background:none;border:none;outline:none;color:var(--text-primary);font-family:var(--font-ui);font-size:14px;line-height:1.6;resize:none;min-height:24px;max-height:160px;overflow-y:auto}
+.input-box textarea::placeholder{color:var(--text-muted)}
+.input-box textarea::-webkit-scrollbar{width:3px}
+.input-box textarea::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+.input-tools{display:flex;align-items:center;gap:8px}
+.input-btn{width:32px;height:32px;border-radius:9px;background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--trans)}
+.input-btn:hover{color:var(--text-primary)}
+.send-btn{width:36px;height:36px;border-radius:10px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--trans);flex-shrink:0}
+.send-btn:hover:not(:disabled){background:#6ba3f9;transform:scale(1.03)}
+.send-btn:disabled{background:var(--bg-surface);color:var(--text-muted);cursor:not-allowed;transform:none}
+.input-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px}
+.input-hint{font-size:11px;color:var(--text-muted)}
+.model-badge{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:5px;background:var(--bg-surface);padding:3px 8px;border-radius:6px;border:1px solid var(--border-soft)}
+.model-dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+/* ENV CONFIG */
+.env-banner{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px;font-size:13px}
+.env-banner h3{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.env-banner p{color:var(--text-secondary);font-size:12px;line-height:1.6;margin-bottom:14px}
+.env-inputs{display:flex;flex-direction:column;gap:10px}
+.env-field{display:flex;flex-direction:column;gap:4px}
+.env-label{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:0.05em;text-transform:uppercase}
+.env-input{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-primary);font-family:var(--font-mono);font-size:12px;outline:none;transition:var(--trans);width:100%}
+.env-input:focus{border-color:var(--accent)}
+.env-save{padding:9px 18px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;margin-top:6px;font-family:var(--font-ui);transition:var(--trans)}
+.env-save:hover{background:#6ba3f9}
+.success-msg{padding:10px 14px;background:var(--bg-surface);border:1px solid #22c55e40;border-radius:var(--radius);font-size:13px;color:#22c55e;display:flex;align-items:center;gap:8px}
+
+@media(max-width:640px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50}
+  .prompt-cards{grid-template-columns:1fr 1fr}
+  .welcome h1{font-size:20px}
+  .msg-content{max-width:90%}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">A</div>
+      <div class="logo-text">Agent PromptX<span>AI Agent Platform</span></div>
+    </div>
+    <button class="sidebar-new" onclick="newChat()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Chat
+    </button>
+    <div class="sidebar-section">Recent</div>
+    <div class="chat-history" id="chatHistory"></div>
+    <div class="sidebar-bottom">
+      <button class="sidebar-btn" onclick="showConfig()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        API Configuration
+      </button>
+      <button class="sidebar-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Prompt Library
+      </button>
+      <button class="sidebar-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Settings
+      </button>
+      <div class="user-section">
+        <div class="user-avatar">U</div>
+        <div>
+          <div class="user-name">Agent User</div>
+          <div class="user-plan">Pro Plan</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- NAVBAR -->
+    <nav class="navbar">
+      <button class="nav-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <span class="nav-title">Agent PromptX</span>
+      <div class="nav-status"><div class="status-dot"></div>Online</div>
+      <button class="nav-clear" onclick="clearChat()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+          <path d="m3 6 1 13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2L21 6"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><line x1="3" y1="6" x2="21" y2="6"/>
+        </svg>
+        Clear
+      </button>
+    </nav>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area" id="chatArea">
+      <div class="chat-inner" id="chatInner">
+        <div id="welcomeScreen">
+          <div class="welcome">
+            <div class="welcome-icon">A</div>
+            <h1>Welcome to <span class="gradient">Agent PromptX</span></h1>
+            <p>Autonomous AI Prompt Engineering &amp; Multi-Agent Intelligence. Start a conversation or choose a suggested prompt below.</p>
+          </div>
+          <div id="configBanner" style="max-width:680px;margin:0 auto 20px"></div>
+          <div class="prompt-cards" style="max-width:680px;margin:0 auto">
+            <button class="prompt-card" onclick="usePrompt('Optimize a complex coding prompt for GPT-4 to improve accuracy and reduce hallucinations')">
+              <div class="prompt-card-icon">⚡</div>
+              <div class="prompt-card-text">Optimize a coding prompt</div>
+              <div class="prompt-card-sub">Enhance for accuracy &amp; clarity</div>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('Generate an AI workflow architecture for a multi-agent system that handles customer support automation')">
+              <div class="prompt-card-icon">🏗️</div>
+              <div class="prompt-card-text">Generate AI workflow architecture</div>
+              <div class="prompt-card-sub">Multi-agent system design</div>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('Analyze this business idea: An AI platform that auto-generates personalized learning paths for professional developers')">
+              <div class="prompt-card-icon">💡</div>
+              <div class="prompt-card-text">Analyze a business idea</div>
+              <div class="prompt-card-sub">Market &amp; feasibility review</div>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('Create a complete RAG strategy for a legal document assistant with accuracy requirements and citation tracking')">
+              <div class="prompt-card-icon">🔍</div>
+              <div class="prompt-card-text">Create a RAG strategy</div>
+              <div class="prompt-card-sub">Retrieval-augmented generation</div>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('How can I significantly improve LLM response quality using advanced prompting techniques like chain-of-thought and few-shot learning?')">
+              <div class="prompt-card-icon">✨</div>
+              <div class="prompt-card-text">Improve LLM response quality</div>
+              <div class="prompt-card-sub">Advanced prompting techniques</div>
+            </button>
+          </div>
+        </div>
+        <div id="messages"></div>
+      </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-area">
+      <div class="input-inner">
+        <div class="input-box">
+          <textarea id="msgInput" placeholder="Ask Agent PromptX anything…" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <div class="input-tools">
+            <button class="input-btn" title="Attach file">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-meta">
+          <span class="input-hint">Enter to send · Shift+Enter for new line</span>
+          <span class="model-badge"><span class="model-dot"></span>Lyzr Agent</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATE = {
+  messages: [],
+  sessions: JSON.parse(localStorage.getItem('apx_sessions') || '[]'),
+  currentSession: null,
+  loading: false,
+  sidebarOpen: true,
+  config: JSON.parse(localStorage.getItem('apx_config') || '{}')
+};
+
+function $(id) { return document.getElementById(id); }
+
+function toggleSidebar() {
+  STATE.sidebarOpen = !STATE.sidebarOpen;
+  $('sidebar').classList.toggle('collapsed', !STATE.sidebarOpen);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatContent(text) {
+  let html = escHtml(text);
+  // Code blocks
+  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre><code>${code.trim()}</code></pre>`);
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // H3
+  html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;display:block;margin:12px 0 4px;color:var(--text-primary)">$1</strong>');
+  // H2
+  html = html.replace(/^## (.+)$/gm, '<strong style="font-size:15px;display:block;margin:14px 0 5px;color:var(--text-primary)">$1</strong>');
+  // List items
+  html = html.replace(/^- (.+)$/gm, '<div style="display:flex;gap:8px;margin:3px 0"><span style="color:var(--accent);flex-shrink:0">▸</span><span>$1</span></div>');
+  // Numbered list
+  html = html.replace(/^\d+\. (.+)$/gm, '<div style="display:flex;gap:8px;margin:3px 0;padding-left:4px"><span style="color:var(--accent);flex-shrink:0;min-width:16px">•</span><span>$1</span></div>');
+  // Paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  return `<p>${html}</p>`;
+}
+
+function newChat() {
+  if (STATE.messages.length > 0) {
+    const preview = STATE.messages[0]?.content?.slice(0, 50) || 'New Chat';
+    STATE.sessions.unshift({ id: Date.now(), preview, messages: [...STATE.messages] });
+    if (STATE.sessions.length > 20) STATE.sessions.pop();
+    localStorage.setItem('apx_sessions', JSON.stringify(STATE.sessions));
+  }
+  STATE.messages = [];
+  STATE.currentSession = null;
+  $('messages').innerHTML = '';
+  $('welcomeScreen').style.display = '';
+  renderHistory();
+}
+
+function clearChat() {
+  STATE.messages = [];
+  $('messages').innerHTML = '';
+  $('welcomeScreen').style.display = '';
+}
+
+function renderHistory() {
+  const el = $('chatHistory');
+  if (!STATE.sessions.length) {
+    el.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text-muted)">No history yet</div>';
+    return;
+  }
+  el.innerHTML = STATE.sessions.slice(0, 10).map((s, i) => `
+    <div class="history-item ${STATE.currentSession === s.id ? 'active' : ''}" onclick="loadSession(${i})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      ${escHtml(s.preview)}
+    </div>`).join('');
+}
+
+function loadSession(i) {
+  const s = STATE.sessions[i];
+  STATE.messages = [...s.messages];
+  STATE.currentSession = s.id;
+  $('messages').innerHTML = '';
+  $('welcomeScreen').style.display = 'none';
+  STATE.messages.forEach(m => renderMessage(m.role, m.content, false));
+  renderHistory();
+}
+
+function renderMessage(role, content, animate = true) {
+  $('welcomeScreen').style.display = 'none';
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  if (!animate) div.style.animation = 'none';
+  const msgId = 'msg_' + Date.now() + Math.random().toString(36).slice(2);
+  const isAI = role === 'ai';
+  div.innerHTML = `
+    <div class="msg-avatar">${isAI ? 'A' : 'U'}</div>
+    <div class="msg-content">
+      <div class="msg-label">${isAI ? 'Agent PromptX' : 'You'}</div>
+      <div class="msg-bubble" id="${msgId}">${formatContent(content)}</div>
+      ${isAI ? `<div class="msg-actions">
+        <button class="msg-action" onclick="copyMsg('${msgId}')">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="14" height="14" x="8" y="8" rx="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+          Copy
+        </button>
+        <button class="msg-action" onclick="regenerate()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          Regenerate
+        </button>
+      </div>` : ''}
+    </div>`;
+  $('messages').appendChild(div);
+  scrollBottom();
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="msg-avatar">A</div>
+    <div class="msg-content">
+      <div class="msg-label">Agent PromptX</div>
+      <div class="msg-bubble">
+        <div class="typing-bubble">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+    </div>`;
+  $('messages').appendChild(div);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const el = $('typingIndicator');
+  if (el) el.remove();
+}
+
+function scrollBottom() {
+  const area = $('chatArea');
+  area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+}
+
+function copyMsg(id) {
+  const el = document.getElementById(id);
+  if (el) navigator.clipboard.writeText(el.innerText).catch(() => {});
+}
+
+function regenerate() {
+  if (STATE.messages.length < 2) return;
+  const lastUser = [...STATE.messages].reverse().find(m => m.role === 'user');
+  if (!lastUser) return;
+  STATE.messages = STATE.messages.slice(0, -1);
+  const lastAi = $('messages').lastElementChild;
+  if (lastAi) lastAi.remove();
+  callLyzr(lastUser.content);
+}
+
+function usePrompt(text) {
+  const input = $('msgInput');
+  input.value = text;
+  autoResize(input);
+  input.focus();
+}
+
+async function sendMessage() {
+  if (STATE.loading) return;
+  const input = $('msgInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  STATE.messages.push({ role: 'user', content: text });
+  renderMessage('user', text);
+  callLyzr(text);
+}
+
+async function callLyzr(userText) {
+  STATE.loading = true;
+  $('sendBtn').disabled = true;
+  showTyping();
+
+  const cfg = STATE.config;
+  const apiKey = cfg.apiKey;
+  const agentId = cfg.agentId;
+  const apiUrl = (cfg.apiUrl || 'https://agent.api.lyzr.ai/v2').replace(/\/$/, '');
+
+  if (!apiKey || !agentId) {
+    await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
+    removeTyping();
+    const demo = getDemoResponse(userText);
+    STATE.messages.push({ role: 'ai', content: demo });
+    renderMessage('ai', demo);
+    STATE.loading = false;
+    $('sendBtn').disabled = false;
+    renderHistory();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${apiUrl}/chat/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-lyzr-api-key': apiKey
+      },
+      body: JSON.stringify({
+        user_id: 'promptx_user',
+        agent_id: agentId,
+        message: userText,
+        session_id: STATE.currentSession ? String(STATE.currentSession) : 'default'
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    removeTyping();
+    const reply = data.response || data.message || data.content ||
+      (data.choices && data.choices[0]?.message?.content) || JSON.stringify(data);
+    STATE.messages.push({ role: 'ai', content: reply });
+    renderMessage('ai', reply);
+  } catch (err) {
+    removeTyping();
+    const errMsg = `**Connection Error**\n\nCouldn't reach the Lyzr API. Please check your configuration.\n\n\`${err.message}\`\n\nTip: Verify your API Key and Agent ID in the sidebar settings.`;
+    STATE.messages.push({ role: 'ai', content: errMsg });
+    renderMessage('ai', errMsg);
+  }
+
+  STATE.loading = false;
+  $('sendBtn').disabled = false;
+  renderHistory();
+}
+
+function getDemoResponse(text) {
+  const lc = text.toLowerCase();
+  if (lc.includes('rag') || lc.includes('retrieval')) {
+    return `## RAG Strategy Design\n\nHere's a comprehensive RAG architecture for your use case:\n\n**Core Pipeline**\n\n- **Document Ingestion**: Chunk at 512 tokens with 10% overlap using semantic chunking\n- **Embedding Model**: \`text-embedding-3-large\` for high-dimensional semantic search\n- **Vector Store**: Pinecone or Weaviate for production-scale retrieval\n- **Hybrid Search**: Combine BM25 sparse + dense vector retrieval\n\n**Advanced Components**\n\n- Re-ranking layer using Cohere Rerank or a fine-tuned cross-encoder\n- Query expansion with HyDE (Hypothetical Document Embeddings)\n- Citation tracking with source metadata\n\n\`\`\`python\ndef retrieve_with_citations(query, top_k=5):\n    chunks = vector_store.similarity_search(query, k=top_k)\n    return [\n        {\n            \"content\": c.page_content,\n            \"source\": c.metadata[\"source\"],\n            \"page\": c.metadata[\"page\"]\n        }\n        for c in chunks\n    ]\n\`\`\`\n\nWant me to expand on any specific component?`;
+  }
+  if (lc.includes('prompt') || lc.includes('optimize')) {
+    return `## Prompt Optimization Framework\n\nHere's how to engineer a high-performance prompt:\n\n**Structural Improvements**\n\n- Add explicit **role definition**: "You are an expert senior engineer..."\n- Define **output format** with concrete examples (few-shot)\n- Use **chain-of-thought**: "Think step by step before answering"\n- Add **constraints**: "Respond only in JSON", "Keep under 200 words"\n\n**Before vs After Example**\n\n\`\`\`\n❌ Before:\n"Write code to sort a list"\n\n✅ After:\n"You are a senior Python engineer. Write a well-documented\nfunction to sort a list of dictionaries by a given key.\nInclude: type hints, docstring, edge case handling,\nand 3 example calls demonstrating usage."\n\`\`\`\n\n**Measured Impact**\n\n- Few-shot examples → ~40% accuracy improvement\n- Chain-of-thought → ~30% fewer logical errors\n- Role definition → more consistent tone and expertise level\n- Temperature 0.2–0.4 for factual tasks, 0.7–0.9 for creative`;
+  }
+  if (lc.includes('architect') || lc.includes('workflow') || lc.includes('multi-agent')) {
+    return `## Multi-Agent Architecture Design\n\nHere's a scalable architecture for your AI workflow system:\n\n**Agent Topology**\n\n- **Orchestrator Agent**: Routes tasks, manages state, handles fallbacks\n- **Specialist Agents**: Domain-specific execution (research, coding, analysis)\n- **Validation Agent**: Quality gates and output verification\n- **Memory Agent**: Long-term context and knowledge management\n\n**Communication Pattern**\n\n\`\`\`\nUser Request\n    ↓\nOrchestrator (task decomposition)\n    ↓         ↓         ↓\nAgent A   Agent B   Agent C\n    ↓         ↓         ↓\n      Aggregator Layer\n          ↓\n    Final Response\n\`\`\`\n\n**Tech Stack Recommendation**\n\n- **Orchestration**: LangGraph or AutoGen\n- **State Management**: Redis with TTL-based cleanup\n- **Observability**: LangSmith + OpenTelemetry\n- **Deployment**: Kubernetes with horizontal pod autoscaling`;
+  }
+  if (lc.includes('business') || lc.includes('analyze') || lc.includes('idea')) {
+    return `## Business Idea Analysis\n\n**Concept Evaluation**\n\nThis is a strong market position. Here's a structured analysis:\n\n**Market Opportunity**\n\n- Developer upskilling market: $15B+ and growing 12% YoY\n- AI-personalized education is a greenfield with minimal direct competition\n- High willingness to pay in enterprise B2B segment\n\n**Competitive Moats**\n\n- Proprietary learning graph built from engagement data\n- Network effects as more learners improve recommendation quality\n- Integration depth with existing developer toolchains (VS Code, GitHub)\n\n**Key Risks**\n\n- Cold start problem: need quality content partnerships from day one\n- Competition from LinkedIn Learning, Pluralsight expanding into AI\n- Content freshness — tech evolves faster than most curricula\n\n**Recommended GTM**\n\n- Start with one vertical: React/TypeScript developers\n- Freemium model with team/enterprise upsell\n- Target developer relations teams at mid-size tech companies\n\n**Verdict**: High potential. Validate with 20 developer interviews before building.`;
+  }
+  return `## Agent PromptX — Demo Mode\n\nI'm currently running in **demo mode** without a live Lyzr API connection.\n\nTo unlock full intelligence:\n\n- Click **API Configuration** in the left sidebar\n- Enter your **Lyzr API Key** and **Agent ID**\n- Your agent will then respond with real AI capabilities\n\n**What I can do in full mode:**\n\n- Optimize prompts for any LLM with measurable improvements\n- Design multi-agent architectures for your use case\n- Analyze business ideas with market research\n- Create complete RAG pipelines with code\n- Review and improve any AI workflow\n\nFeel free to explore the suggested prompts on the welcome screen, or ask me anything — I'll demonstrate my capabilities in demo mode.`;
+}
+
+function showConfig() {
+  const cfg = STATE.config;
+  $('configBanner').innerHTML = `
+    <div class="env-banner">
+      <h3>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Lyzr API Configuration
+      </h3>
+      <p>Connect your Lyzr account to enable full AI agent capabilities. Credentials are stored in your browser locally only.</p>
+      <div class="env-inputs">
+        <div class="env-field">
+          <label class="env-label">Lyzr API Key</label>
+          <input class="env-input" id="cfgKey" type="password" placeholder="lyzr_..." value="${cfg.apiKey || ''}">
+        </div>
+        <div class="env-field">
+          <label class="env-label">Agent ID</label>
+          <input class="env-input" id="cfgAgent" placeholder="agent_..." value="${cfg.agentId || ''}">
+        </div>
+        <div class="env-field">
+          <label class="env-label">API Base URL (optional)</label>
+          <input class="env-input" id="cfgUrl" placeholder="https://agent.api.lyzr.ai/v2" value="${cfg.apiUrl || ''}">
+        </div>
+        <button class="env-save" onclick="saveConfig()">Save Configuration</button>
+      </div>
+    </div>`;
+  $('welcomeScreen').style.display = '';
+  $('messages').innerHTML = '';
+  STATE.messages = [];
+  scrollBottom();
+}
+
+function saveConfig() {
+  STATE.config = {
+    apiKey: $('cfgKey').value.trim(),
+    agentId: $('cfgAgent').value.trim(),
+    apiUrl: $('cfgUrl').value.trim()
+  };
+  localStorage.setItem('apx_config', JSON.stringify(STATE.config));
+  $('configBanner').innerHTML = `
+    <div class="success-msg">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      Configuration saved! Agent PromptX is now connected to your Lyzr agent.
+    </div>`;
+  setTimeout(() => {
+    const b = $('configBanner');
+    if (b) b.innerHTML = '';
+  }, 4000);
+}
+
+// Init
+renderHistory();
+if (!STATE.config.apiKey) {
+  setTimeout(showConfig, 200);
+}
+</script>
+</body>
+</html>
