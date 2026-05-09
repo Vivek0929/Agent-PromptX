@@ -183,10 +183,6 @@ html,body{height:100%;background:var(--bg-void);color:var(--text-primary);font-f
     <div class="sidebar-section">Recent</div>
     <div class="chat-history" id="chatHistory"></div>
     <div class="sidebar-bottom">
-      <button class="sidebar-btn" onclick="showConfig()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        API Configuration
-      </button>
       <button class="sidebar-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         Prompt Library
@@ -233,7 +229,6 @@ html,body{height:100%;background:var(--bg-void);color:var(--text-primary);font-f
             <h1>Welcome to <span class="gradient">Agent PromptX</span></h1>
             <p>Autonomous AI Prompt Engineering &amp; Multi-Agent Intelligence. Start a conversation or choose a suggested prompt below.</p>
           </div>
-          <div id="configBanner" style="max-width:680px;margin:0 auto 20px"></div>
           <div class="prompt-cards" style="max-width:680px;margin:0 auto">
             <button class="prompt-card" onclick="usePrompt('Optimize a complex coding prompt for GPT-4 to improve accuracy and reduce hallucinations')">
               <div class="prompt-card-icon">⚡</div>
@@ -295,13 +290,21 @@ html,body{height:100%;background:var(--bg-void);color:var(--text-primary);font-f
 </div>
 
 <script>
+const DEFAULT_API_KEY = 'sk-default-XSLuxabptTqmDuwRAU0OXTaUjlEvWJfm';
+const DEFAULT_AGENT_ID = '69fed9046495e15c8427d6aa';
+
+const savedConfig = JSON.parse(localStorage.getItem('apx_config') || '{}');
 const STATE = {
   messages: [],
   sessions: JSON.parse(localStorage.getItem('apx_sessions') || '[]'),
   currentSession: null,
   loading: false,
   sidebarOpen: true,
-  config: JSON.parse(localStorage.getItem('apx_config') || '{}')
+  config: {
+    apiKey: savedConfig.apiKey || DEFAULT_API_KEY,
+    agentId: savedConfig.agentId || DEFAULT_AGENT_ID,
+    apiUrl: savedConfig.apiUrl || 'https://agent.api.lyzr.ai/v2'
+  }
 };
 
 function $(id) { return document.getElementById(id); }
@@ -624,9 +627,6 @@ function saveConfig() {
 
 // Init
 renderHistory();
-if (!STATE.config.apiKey) {
-  setTimeout(showConfig, 200);
-}
 </script>
 </body>
 </html>
